@@ -1,9 +1,5 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import paho.mqtt.client as mqtt
-import time
-import os
-import pika
 
 app = FastAPI(title="api de botones", description="esta es una api de control", version="1.0.0")
 
@@ -23,10 +19,5 @@ app.add_middleware(
 
 @app.get("/")
 async def index():
-      connection = pika.BlockingConnection(pika.ConnectionParameters("20.121.64.231"))
-      channel = connection.channel()
-      channel.queue_declare(queue='mensajes')
-      channel.basic_publish(exchange='amq.topic',
-                      routing_key='mensajes',
-                      body='MENSAJE HACIA  LA APLICACION MQTIZER')
-print("'MENSAJE EN LA TERMINAL'")
+    # aquí va el código de para rabbit
+    print("hola")

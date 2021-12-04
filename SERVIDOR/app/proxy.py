@@ -6,12 +6,6 @@ import datetime, time
 from influxdb_client import InfluxDBClient, Point, Dialect
 from influxdb_client.client.write_api import SYNCHRONOUS
 
-########################
-from pandas.core.frame import DataFrame
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
-
-
 
 ################################# CREDENCIALES A RABBIT E INFLUXDB EN PROXI########################
 my_bucket = os.environ.get("DOCKER_INFLUXDB_INIT_BUCKET")
@@ -30,7 +24,7 @@ queue_name  = "mensajes"
 #queue_name  = "mensajes"
 
 ############################ ACTIVACION DE ESCRITURA Y SOLICITUD DE DATOS EN INFLUXDB #######################
-client = InfluxDBClient(url="http://52.149.151.75:8086", token=db_token, org=my_org)
+client = InfluxDBClient(url="http://20.121.64.231:8086", token=db_token, org=my_org)
 write_api = client.write_api(write_options=SYNCHRONOUS)
 query_api = client.query_api()
 
@@ -43,59 +37,55 @@ def guardar_datos_influxdb_sin_procesar(a):
     now = datetime.datetime.now()
     now_local = now - timedelta(hours=5)
     date_time = now_local.strftime('%d/%m/%Y %H:%M:%S')
-    
-    HF =  int(vector[0])
-    MF =  int(vector[1])
-    SF =  int(vector[2])
-    HD =  int(vector[3])
-    MD =  int(vector[4])
-    SD =  int(vector[5])
-    TM =  float(vector[6])
-    MA =  float(vector[7])
-    PPM =  float(vector[8])
-    
-    
-    
-    
+    presion =  float(vector[1])
+    temperatura =  float(vector[0])
+    nivel =  float(vector[2])
     print()
-    print("##################### RECIBIENDO DATOS......#########################")
+    print("RECIBIENDO DATOS......")
     print()
     write_api = client.write_api(write_options=SYNCHRONOUS)
-    point = Point("DATOS_FERMENTACION_Y_DESTILACION").field("FECHA", date_time).field("F_Horas", HF).field("F_Minutos", MF).field("F_Segundos", SF).field("D_Horas", HD).field("D_Minutos", MD).field("D_Segundos", SD).field("TEMPERATURA", TM).field("MILILITROS_ALCOHOL", MA).field("PPM_ALCOHOL", PPM)
+    point = Point("DATOS_FERMENTACION_Y_DESTILACION").field("FECHA", date_time).field("TEMP", temperatura).field("PRES", presion).field("NIV", nivel)
     write_api.write(my_bucket, my_org, point)
     print()
-    print("##################### ENVIANDO DATOS  A INFLUXDB---->")
+    print("ENVIANDO DATOS  A INFLUXDB---->Temperatura->", temperatura," Presion->",presion,"Nivel--->",nivel)
     print()
     solicitar_datos_de_influxdb()
     return
-
 def solicitar_datos_de_influxdb():
-    print("######################### SOLICITAR DATOS ALMACENADOS......#####################")
+    print("SOLICITAR DATOS ALMACENADOS......")
     print()
     data_frame = query_api.query_data_frame('from(bucket:"DATOS_PROYECTO_FINAL") '
                                             '|> range(start: -60m) '
                                             '|> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value") '
-                                            '|> keep(columns: ["TEMPERATURA", "MILILITROS_ALCOHOL", "PPM_ALCOHOL", "FECHA"])')
+                                            '|> keep(columns: ["TEMP", "PRES", "NIV", "FECHA"])')
 
-    #datos_filtrados = data_frame.to_string()
+    datos_filtrados = data_frame.to_string()
 
     print("DATAFRAME DE DATOS SOLICITADOS")
     print()
-    data_frame.set_index('FECHA', inplace = True)
-    print(data_frame)
+    print(datos_filtrados)
     print()
     print()
     print("ANALIZANDO DATOS....")
-    print()    
-    print("#################### ANALISIS DE DATOS  ######################")
     print()
-
-    print("#################### ENVIO DE DATOS  ######################")
+    
+   
+    ##############################################################
+    ######### AQUI VA CODIGO DE ANALISIS DE DATOS ################
+    ##############################################################
+       
+        
+        
+     
+    ######################################envio de datos ########################
+       
     print()
     print("DATOS FILTRADOS...")
     print()
-    point2 = Point("DATOS_DESTILACION_PROCESADOS").field("TEMPERATURA", float(data_frame['TEMPERATURA'].values[-1])).field("MILILITROS_ALCOHOL", float(data_frame['MILILITROS_ALCOHOL'].values[-1])).field("PPM_ALCOHOL", float(data_frame['PPM_ALCOHOL'].values[-1]))
-    write_api.write("DESTILACION", my_org, point2)
+    point2 = Point("DATOS_FERMENTACION_PROCESADOS").field("TEMPERATURA", float(data_frame['TEMP'].values[-1])).field("PRESION", float(data_frame['PRES'].values[-1])).field("NIVEL", float(data_frame['NIV'].values[-1]))
+    write_api.write("FERMENTACION", my_org, point2)
+    point3 = Point("DATOS_DESTILACION_PROCESADOS").field("TEMPERATURA", float(data_frame['TEMP'].values[-1])).field("PRESION", float(data_frame['PRES'].values[-1]))
+    write_api.write("DESTILACION", my_org, point3)
     print()
     print("ENVIO DE DATOS PROCESADOS CON EXITO---->BUCKET---FERMENTACION,DESTILACION.")
     print()
@@ -103,8 +93,22 @@ def solicitar_datos_de_influxdb():
     #client.close()
     return
 
+    ###########################################CREAR BUCKET EN INFLUXDB###########################################3
+
+#def analisis_de_datos(a):
+ #   #lista = []
+    
+  #  return
+
+#def envio_de_datos_procesados(b):
+    
+   # lista = []
+    
+ #   return
+
 
 ###############################################  ACTUALIZACION DE DATOS ###################################
+
 
 def process_function(msg):
   mesage = msg.decode("utf-8")
@@ -116,7 +120,7 @@ def process_function(msg):
 
 while 1:
 
-  url = os.environ.get('CLOUDAMQP_URL', 'amqp://{}:{}@52.149.151.75:5672/%2f'.format(rabbit_user, rabbit_password))
+  url = os.environ.get('CLOUDAMQP_URL', 'amqp://{}:{}@20.121.64.231:5672/%2f'.format(rabbit_user, rabbit_password))
   params = pika.URLParameters(url)
   connection = pika.BlockingConnection(params)
   channel = connection.channel() # start a channel
@@ -133,4 +137,3 @@ while 1:
   channel.start_consuming()
   connection.close()
 ################################################################################################################
-

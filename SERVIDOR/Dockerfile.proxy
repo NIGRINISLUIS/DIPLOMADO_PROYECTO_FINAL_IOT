@@ -10,8 +10,5 @@ RUN pip install datetime
 RUN pip install influxdb_client
 RUN pip install pika
 RUN pip install 'influxdb-client[extra]'
-RUN pip install pandas
-RUN pip install scikit-learn
-RUN pip install scipy
 COPY . /app
 CMD ["python", "proxy.py"]
