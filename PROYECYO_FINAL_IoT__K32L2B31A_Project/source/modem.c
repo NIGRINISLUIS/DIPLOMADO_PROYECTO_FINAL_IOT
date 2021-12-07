@@ -1,5 +1,5 @@
 /*! @file : modem.c
- * @author  Luis Carlos Nigrinis Alvarez
+ * @author  José Morales Vega
  * @version 1.0.0
  * @date    21/10/2021
  * @brief   Driver para 
@@ -69,6 +69,8 @@ extern uint8_t horas_destilacion;
 extern float mililitros_alcohol;
 extern float sensor_temperatura;
 extern float alcohol;
+extern float total_minutos_destilacion;
+
 
 
 
@@ -182,7 +184,7 @@ enum{
 };
 
 void Modem_Init(void){
-	modemSt = ST_MOD_PUBLIC_DAT;
+	modemSt = ST_MOD_CFG;
 }
 
 
@@ -262,10 +264,10 @@ void Modem_Task_Run(void){
 	break;
 	case ST_MOD_PUBLIC_DAT:
 		//encender_led_rojo();
-		printf("%d,%d,%d,%d,%d,%d,%0.1f,%0.1f,%0.1f\r\n",horas,minutos,segundos,horas_destilacion,minutos_destilacion,segundos_destilacion,sensor_temperatura,mililitros_alcohol,alcohol);
+		printf("%d,%d,%d,%d,%d,%d,%0.1f,%0.1f,%0.1f,%0.1f\r\n",horas,minutos,segundos,horas_destilacion,minutos_destilacion,segundos_destilacion,sensor_temperatura,mililitros_alcohol,alcohol,total_minutos_destilacion);
 		//printf("%0.2f\r\n",sensor_temperatura);
 		putchar(CNTL_Z);
-		Modem_Rta_Cmd(5000,"OK",ST_MOD_PUBLIC_DAT,ST_MOD_PUBLIC_DAT);
+		Modem_Rta_Cmd(5000,"OK",ST_MOD_CONN_PUB,ST_MOD_CONN_PUB);
 		//recibiMsgQtt = 0;*/
 		//Modem_Rta_Cmd_2("RING",ST_MOD_RING_ON);
 		//Key_Task_Run();
@@ -460,4 +462,3 @@ static uint32_t time2waitEnd_URC;
 /*******************************************************************************
  * Public Source Code
  ******************************************************************************/
- 

@@ -1,5 +1,5 @@
 /*! @file : cronometro.c
- * @author  Luis Carlos Nigrinis Alvarez
+ * @author  José Morales Vega
  * @version 1.0.0
  * @date    7/11/2021
  * @brief   Driver para 
@@ -47,6 +47,7 @@ uint8_t horas_destilacion=0;
 uint8_t pulsador_fermentacion = 1;
 uint8_t pulsador_destilacion = 1;
 float mililitros_alcohol = 0 ;
+float total_minutos_destilacion = 0 ;
 
 /*******************************************************************************
  * Private Source Code
@@ -102,6 +103,7 @@ void Destilacion(void){
 		encender_led_verde();
 		sensor_temperatura = 0;
 		alcohol = 0;
+		total_minutos_destilacion = 0;
 		mililitros_alcohol = sensor_1_ultrasonico*0.0;
 		GPIO_PinWrite(GPIOA,13,0);
 	}
@@ -127,10 +129,10 @@ void Destilacion(void){
 	    if(sensor_temperatura > 35.0){
 	    	GPIO_PinWrite(GPIOA,13,0);
 	    }
+	    total_minutos_destilacion = minutos_destilacion + segundos_destilacion*0.017 + horas_destilacion*60;
 	    if(sensor_temperatura < 33.0){
 	    	GPIO_PinWrite(GPIOA,13,1);
 	    }
-
 	}
 
 }
