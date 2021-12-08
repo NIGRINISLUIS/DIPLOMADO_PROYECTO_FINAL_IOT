@@ -1,5 +1,5 @@
 /*! @file : irq_lptmr0.h
- * @author  Luis Carlos Nigrinis Alvarez
+ * @author
  * @version 1.0.0
  * @date    11/09/2021
  * @brief   Driver para 
@@ -42,6 +42,7 @@ extern volatile uint32_t tiempodestilacion;
 extern volatile uint32_t boton1_presionado;
 extern volatile uint32_t estado;
 extern volatile uint32_t tiempo_envio_a_rabbit;
+extern volatile uint32_t tiempo_conectando_a_la_red;
 /*******************************************************************************
  * Public Prototypes
  ******************************************************************************/
