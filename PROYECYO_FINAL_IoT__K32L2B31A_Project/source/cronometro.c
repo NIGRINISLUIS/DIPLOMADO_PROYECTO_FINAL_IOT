@@ -61,6 +61,7 @@ void Fermentacion(void){
 	if(GPIO_PinRead(GPIOC,1)==0){
 		 pulsador_fermentacion = pulsador_fermentacion + 1;
 		 delay_200ms_block();
+		 delay_200ms_block();
 	}
 	if(pulsador_fermentacion % 2 == 0){
    		tiempofermentacion=0;
@@ -68,6 +69,8 @@ void Fermentacion(void){
 		minutos=0;
 		horas=0;
 		encender_led_verde();
+		GPIO_PinWrite(GPIOD,2,1);
+		GPIO_PinWrite(GPIOD,4,0);
 	}
 	if(pulsador_fermentacion%2==1  && GPIO_PinRead(GPIOC,1)!=0){
 		segundos=tiempofermentacion*0.001;
@@ -84,6 +87,8 @@ void Fermentacion(void){
 		if(segundos>=1){
 			apagar_led_verde();
 		}
+		GPIO_PinWrite(GPIOD,2,0);
+	    GPIO_PinWrite(GPIOD,4,1);
 
 	}
 }
@@ -92,6 +97,7 @@ void Fermentacion(void){
 void Destilacion(void){
 	if(GPIO_PinRead(GPIOE,1)==0){
 		pulsador_destilacion = pulsador_destilacion + 1;
+		  delay_200ms_block();
 		  delay_200ms_block();
 	}
 
@@ -106,6 +112,8 @@ void Destilacion(void){
 		total_minutos_destilacion = 0;
 		mililitros_alcohol = sensor_1_ultrasonico*0.0;
 		GPIO_PinWrite(GPIOA,13,0);
+		GPIO_PinWrite(GPIOD,6,1);
+	    GPIO_PinWrite(GPIOD,7,0);
 	}
 
 	if(pulsador_destilacion%2==1  && GPIO_PinRead(GPIOE,1)!=0){
@@ -133,6 +141,9 @@ void Destilacion(void){
 	    if(sensor_temperatura < 33.0){
 	    	GPIO_PinWrite(GPIOA,13,1);
 	    }
+
+	    GPIO_PinWrite(GPIOD,6,0);
+	    GPIO_PinWrite(GPIOD,7,1);
 	}
 
 }

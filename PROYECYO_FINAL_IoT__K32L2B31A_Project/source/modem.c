@@ -1,5 +1,5 @@
 /*! @file : modem.c
- * @author  José Morales Vega
+ * @author
  * @version 1.0.0
  * @date    21/10/2021
  * @brief   Driver para 
@@ -185,7 +185,10 @@ enum{
 
 void Modem_Init(void){
 	modemSt = ST_MOD_CFG;
+	GPIO_PinWrite(GPIOE,0,0);
+	GPIO_PinWrite(GPIOB,3,1);
 }
+
 
 
 
@@ -203,22 +206,27 @@ void Modem_Task_Run(void){
 	case ST_MOD_IDLE: // IDLE
 	break;
 	case ST_MOD_CFG:
+		GPIO_PinWrite(GPIOB,3,0);
 		Modem_Send_Cmd("ATE0\r\n"); 								// ATE0 Quitar ECO
       	Modem_Rta_Cmd(TIME_WAIT_RTA_CMD,"OK",ST_MOD_CFG_URC,ST_MOD_CFG); //rx OK
 	break;
 	case ST_MOD_CFG_URC:
+		GPIO_PinWrite(GPIOB,3,1);
 		Modem_Send_Cmd("AT+QURCCFG=\"urcport\",\"uart1\"\r\n");
 		Modem_Rta_Cmd(TIME_WAIT_RTA_CMD,"OK",ST_MOD_CFG_ALL_URC,ST_MOD_CFG_URC);
 	break;
 	case ST_MOD_CFG_ALL_URC:
+		GPIO_PinWrite(GPIOB,3,0);
 		Modem_Send_Cmd("AT+QINDCFG=\"ALL\",1,1\r\n");
 		Modem_Rta_Cmd(TIME_WAIT_RTA_CMD,"OK",ST_MOD_PWR_OFF,ST_MOD_CFG_URC);
 	break;
 	case ST_MOD_PWR_OFF:
+		GPIO_PinWrite(GPIOB,3,1);
 		Modem_Send_Cmd("AT+CFUN=0\r\n"); // Modo Avion				//AT+CFUN=0
 		Modem_Rta_Cmd(TIME_WAIT_RTA_CMD,"OK",ST_MOD_APN,ST_MOD_PWR_OFF); //rx OK
  	break;
 	case ST_MOD_APN:
+		GPIO_PinWrite(GPIOB,3,0);
 		buffer_comando_enviar[0] = 0;
 		strcat(buffer_comando_enviar,"AT+CGDCONT=1,\"IP\"");
 		strcat(buffer_comando_enviar,APN_APP);
@@ -227,47 +235,55 @@ void Modem_Task_Run(void){
 		Modem_Rta_Cmd(TIME_WAIT_RTA_CMD,"OK",ST_MOD_PWR_ON,ST_MOD_APN); 	// rx "OK"
 	break;
 	case ST_MOD_PWR_ON:
+		GPIO_PinWrite(GPIOB,3,1);
 		Modem_Send_Cmd("AT+CFUN=1\r\n");								//tx "AT+CFUN=1"
 		Modem_Rta_Cmd(TIME_WAIT_RTA_CMD,"OK",ST_MOD_SIM,ST_MOD_PWR_ON); 	//rx "OK"
     break;
  	case ST_MOD_SIM:
+ 		GPIO_PinWrite(GPIOB,3,0);
  		Modem_Send_Cmd("AT+CPIN?\r\n");									//tx "AT+CPIN?"
  		Modem_Rta_Cmd(TIME_WAIT_RTA_CMD,"READY",ST_MOD_SIGNAL,ST_MOD_SIM); // rx "READY"
 	break;
 	case ST_MOD_SIGNAL:
+		GPIO_PinWrite(GPIOB,3,1);
 		Modem_Send_Cmd("AT+CSQ\r\n");									//tx "AT+CSQ"
 		Modem_Rta_Cmd(TIME_WAIT_RTA_CMD,"+CSQ",ST_MOD_SEARCHING,ST_MOD_SIGNAL);
 	break;
 	case ST_MOD_SEARCHING:
-		encender_led_rojo();
-		apagar_led_verde();
+		GPIO_PinWrite(GPIOB,3,0);
 		Modem_Send_Cmd("AT+CREG?\r\n");											//tx "AT+CREG?"
 		Modem_Rta_Cmd(TIME_WAIT_RTA_CMD,"0,1",ST_MOD_ACT_CTX,ST_MOD_SEARCHING); 	//rx  "0,1"
 	break;
 	case ST_MOD_ACT_CTX:
-		encender_led_verde();
-		apagar_led_rojo();
+		GPIO_PinWrite(GPIOB,3,1);
 		Modem_Send_Cmd("AT+QIACT=1\r\n"); 									//tx "AT+QIACT=1"
 		Modem_Rta_Cmd(10000,"OK",ST_MOD_OPEN_MQTT,ST_MOD_ACT_CTX); 	//rx "OK"
 	break;
 	case ST_MOD_OPEN_MQTT:
+		GPIO_PinWrite(GPIOB,3,0);
 		Modem_Send_Cmd("AT+QMTOPEN=0,\"52.149.151.75\",1883\r\n"); //tx "AT+QMTOPEN=0,"52.149.151.75",1883"
 		Modem_Rta_Cmd(5000,"+QMTOPEN: 0,0",ST_MOD_CONN_TOPIC,ST_MOD_ACT_CTX);
 	break;
 	case ST_MOD_CONN_TOPIC:
+		GPIO_PinWrite(GPIOB,3,1);
 		Modem_Send_Cmd("AT+QMTCONN=0,\"mensajes\"\r\n");	//tx "AT+QMTCONN=0,"TOPICO_APP""
 		Modem_Rta_Cmd(TIME_WAIT_RTA_CMD,"+QMTCONN: 0,0,0",ST_MOD_CONN_PUB,ST_MOD_OPEN_MQTT);
 	break;
 	case ST_MOD_CONN_PUB:
+		GPIO_PinWrite(GPIOB,3,1);
 		Modem_Send_Cmd("AT+QMTPUB=0,0,0,0,\"mensajes\"\r\n");		//tx "AT+QMTPUB=0,0,0,0,TOPICO_APP"
 		Modem_Rta_Cmd(5000,">",ST_MOD_PUBLIC_DAT,ST_MOD_CONN_TOPIC);
+		GPIO_PinWrite(GPIOE,0,0);
 	break;
 	case ST_MOD_PUBLIC_DAT:
+
+		GPIO_PinWrite(GPIOB,3,0);
 		//encender_led_rojo();
 		printf("%d,%d,%d,%d,%d,%d,%0.1f,%0.1f,%0.1f,%0.1f\r\n",horas,minutos,segundos,horas_destilacion,minutos_destilacion,segundos_destilacion,sensor_temperatura,mililitros_alcohol,alcohol,total_minutos_destilacion);
 		//printf("%0.2f\r\n",sensor_temperatura);
 		putchar(CNTL_Z);
-		Modem_Rta_Cmd(5000,"OK",ST_MOD_CONN_PUB,ST_MOD_CONN_PUB);
+		GPIO_PinWrite(GPIOE,0,1);
+		Modem_Rta_Cmd(15000,"ENVIAR_CADA_20_SEGUNDOS",ST_MOD_CONN_PUB,ST_MOD_CONN_PUB);
 		//recibiMsgQtt = 0;*/
 		//Modem_Rta_Cmd_2("RING",ST_MOD_RING_ON);
 		//Key_Task_Run();
