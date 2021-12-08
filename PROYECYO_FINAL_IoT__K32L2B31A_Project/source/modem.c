@@ -283,7 +283,7 @@ void Modem_Task_Run(void){
 		//printf("%0.2f\r\n",sensor_temperatura);
 		putchar(CNTL_Z);
 		GPIO_PinWrite(GPIOE,0,1);
-		Modem_Rta_Cmd(15000,"ENVIAR_CADA_20_SEGUNDOS",ST_MOD_CONN_PUB,ST_MOD_CONN_PUB);
+		Modem_Rta_Cmd(10000,"ESPERAR...",ST_MOD_CONN_PUB,ST_MOD_CONN_PUB);
 		//recibiMsgQtt = 0;*/
 		//Modem_Rta_Cmd_2("RING",ST_MOD_RING_ON);
 		//Key_Task_Run();
