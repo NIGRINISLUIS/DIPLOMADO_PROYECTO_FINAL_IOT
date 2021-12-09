@@ -13,5 +13,6 @@ RUN pip install 'influxdb-client[extra]'
 RUN pip install pandas
 RUN pip install scikit-learn
 RUN pip install scipy
+RUN pip install numpy
 COPY . /app
 CMD ["python", "proxy.py"]

@@ -23,7 +23,7 @@ app.add_middleware(
 
 @app.get("/")
 async def index():
-      connection = pika.BlockingConnection(pika.ConnectionParameters("20.121.64.231"))
+      connection = pika.BlockingConnection(pika.ConnectionParameters("20.119.217.173"))
       channel = connection.channel()
       channel.queue_declare(queue='mensajes')
       channel.basic_publish(exchange='amq.topic',
