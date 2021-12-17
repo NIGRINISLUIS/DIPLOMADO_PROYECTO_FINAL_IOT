@@ -70,9 +70,14 @@ void sensor_MQ3_Task_Run(void){
 	sensor_MQ3_obtenerdato();
 	ADC16_SetChannelConfig(DEMO_ADC16_BASE, DEMO_ADC16_CHANNEL_GROUP, &adc16ChannelConfigStruct);
 	adc_sensor_MQ3 = ADC16_GetChannelConversionValue(DEMO_ADC16_BASE, DEMO_ADC16_CHANNEL_GROUP);
-    voltaje = adc_sensor_MQ3 * (5.0 / 1023.0);
-    Rs = 1000*((5-voltaje)/voltaje);
-    alcohol=0.4091*pow(Rs/5463, -1.497);
+    voltaje = adc_sensor_MQ3 * (5 / 1023.0);
+
+    if(voltaje < 5){
+    	Rs = 1000*((5-voltaje)/voltaje);
+    	alcohol = (0.4091*pow(Rs/5463, -1.497))-1;
+    }
+    //alcohol = voltaje;
+    //alcohol = (0.4091*pow(Rs/5463, -1.497))-2;
     //printf("%0.4f\r\n",alcohol);
 }
 

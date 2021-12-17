@@ -54,6 +54,7 @@ uint16_t dato_final_entero;
 uint16_t dato_final_decimal;
 uint16_t dato_decimal ;
 float temperatura_grados ;
+float temperatura_correccion;
 
 spi_master_config_t userConfig = {0};
 uint32_t srcFreq               = 0;
@@ -111,12 +112,17 @@ float Sensor_temperatura_Captura_de_datos(void){
 		dato_final_decimal  = dato_decimal>>3;
 		dato_entero = dato_original & 0b0000111111100000;
 		dato_final_entero = dato_entero>>5;
+
 		temperatura_grados = dato_final_entero + dato_final_decimal*0.1;
+
+		if(temperatura_grados > 10){
+			temperatura_correccion = temperatura_grados;
+		}
 		//printf("16_bits---%d\r\n",dato_original);
 		//printf("%0.2f\r\n",temperatura_grados);
 	}
 
-	return(temperatura_grados);
+	return(temperatura_correccion);
 }
 
 

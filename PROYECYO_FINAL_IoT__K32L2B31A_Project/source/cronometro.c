@@ -110,7 +110,7 @@ void Destilacion(void){
 		sensor_temperatura = 0;
 		alcohol = 0;
 		total_minutos_destilacion = 0;
-		mililitros_alcohol = sensor_1_ultrasonico*0.0;
+		mililitros_alcohol = sensor_1_ultrasonico*1000;
 		GPIO_PinWrite(GPIOA,13,0);
 		GPIO_PinWrite(GPIOD,6,1);
 	    GPIO_PinWrite(GPIOD,7,0);
@@ -134,11 +134,12 @@ void Destilacion(void){
 		Sensor_temperatura_Task_Run();
 	    sensor_MQ3_Task_Run();
 	    mililitros_alcohol = sensor_1_ultrasonico;
-	    if(sensor_temperatura > 35.0){
+	    total_minutos_destilacion = minutos_destilacion + segundos_destilacion*0.017 + horas_destilacion*60;
+
+	    if(sensor_temperatura > 78.0){
 	    	GPIO_PinWrite(GPIOA,13,0);
 	    }
-	    total_minutos_destilacion = minutos_destilacion + segundos_destilacion*0.017 + horas_destilacion*60;
-	    if(sensor_temperatura < 33.0){
+	    if(sensor_temperatura < 77.0){
 	    	GPIO_PinWrite(GPIOA,13,1);
 	    }
 
