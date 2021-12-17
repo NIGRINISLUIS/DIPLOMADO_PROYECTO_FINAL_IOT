@@ -177,84 +177,27 @@ def solicitar_datos_de_influxdb():
     
     print()
     #print("prediccion")
-    ####################################################################################
-
-    
-    print("REGRESION LINEAL PARA MILILITROS D3 ALCOHOL")
-
-    dataX =df_influxDB_procesado[['TEMPERATURA']]
-    X_train = np.array(dataX)
-    y_train = df_influxDB_procesado['MILILITROS_ALCOHOL'].values
-
-    # Creamos el objeto de Regresión Linear
-    regr = linear_model.LinearRegression()
-
-    # Entrenamos nuestro modelo
-    regr.fit(X_train, y_train)
-
-    # Hacemos las predicciones que en definitiva una línea (en este caso, al ser 2D)
-    y_pred = regr.predict(X_train)
-
-    # Veamos los coeficienetes obtenidos, En nuestro caso, serán la Tangente
-    print('Coefficients: \n', regr.coef_)
-    # Este es el valor donde corta el eje Y (en X=0)
-    print('Independent term: \n', regr.intercept_)
-    # Error Cuadrado Medio
-    print("Mean squared error: %.2f" % mean_squared_error(y_train, y_pred))
-    # Puntaje de Varianza. El mejor puntaje es un 1.0
-    print('Variance score: %.2f' % r2_score(y_train, y_pred))
-
-    coeficiente = float(regr.coef_)
-    termino_independiente = float(regr.intercept_)
-    error_cuadratico_media = float(mean_squared_error(y_train, y_pred))
-    varianza = float(r2_score(y_train, y_pred))
-    
-    y = coeficiente*(1 + df_influxDB_procesado['TEMPERATURA'].values[-1])+termino_independiente
-    
-
-    point6 = Point("REGRESION LINEAL MILILITROS").field("Coefficients",coeficiente).field("Independent term",termino_independiente)\
-    .field("Mean squared error",error_cuadratico_media).field("Variance score",varianza).field("prediccion_mililitros",y)
-    write_api.write("DESTILACION", my_org, point6)
     print()
-    print(y)
+    x_train = df_influxDB_procesado.iloc[:df_influxDB_procesado.shape[0]-1, [2, 3]]
+    y_train = df_influxDB_procesado.iloc[:df_influxDB_procesado.shape[0]-1, 0]
+    predict_value = DataFrame(df_influxDB_procesado[['TEMPERATURA','TIEMPO_DESTILACION_{minutos}']].values[-1], 
+                              index=['TEMPERATURA', 'TIEMPO_DESTILACION_{minutos}'])
+    #print(predict_value.shape ,type(predict_value))
+    #print(predict_value)
+    linear_reg = LinearRegression().fit(x_train, y_train)
+    test_predict = linear_reg.predict(predict_value.T)
+    #print("prediccion MILILITROS_ALCOHOL con respecto a las otras varibles ", test_predict)
     
+    test_predict = float(test_predict)
+    point6 = Point("REGRESION LINEAL").field("Prediccion_MILILITROS_ALCOHOL",test_predict)
+    write_api.write("DESTILACION", my_org, point6)
 
-
-    #########################################
-    alerta_mqtt(y)
 
     #client.close()
     return
 
-################################################ envio de alerta  ########################################3333
-def on_connect(client, userdata, flags, rc):
-    client.subscribe('mensajes')
-    client.publish('mensajes', 'activar_alarma', 0, False)
-
-def on_publish(client, userdata, mid):
-    print("mid: " + str(mid))
-
-def on_message(client, userdata, msg):
-    print(msg.topic + " " + str(msg.payload))
-
-def alerta_mqtt(accion):
-    mqtthost = "20.121.64.231"
-    mqttuser = "guest"
-    mqttpass = "guest"
-    client = paho.Client()
-    client.on_connect = on_connect
-    client.on_publish = on_publish
-    client.on_message = on_message
-    client.username_pw_set(mqttuser, mqttpass)
-    client.connect(mqtthost, 1883, 60)
-    if(accion > 85):
-        client.publish('mensajes', 'PRECAUCION', 0, False)
-    
-    return
-
 
 ###############################################  ACTUALIZACION DE DATOS ###################################
-
 
 def process_function(msg):
   mesage = msg.decode("utf-8")

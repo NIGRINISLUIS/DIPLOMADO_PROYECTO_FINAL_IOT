@@ -13,5 +13,7 @@ RUN pip install 'influxdb-client[extra]'
 RUN pip install pandas
 RUN pip install scikit-learn
 RUN pip install scipy
+RUN pip install numpy
+RUN pip install paho.mqtt
 COPY . /app
 CMD ["python", "proxy.py"]
