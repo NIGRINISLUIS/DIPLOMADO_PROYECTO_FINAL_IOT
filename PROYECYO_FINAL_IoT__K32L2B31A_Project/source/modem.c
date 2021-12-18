@@ -297,8 +297,6 @@ void Modem_Task_Run(void){
 	break;
 	///////////////////////////////////Aqui empieza los estados de envio y recibo de datos por mqqtt///////
 
-
-	//////////////////
 	case ST_MOD_CONN_PUB:
 		GPIO_PinWrite(GPIOB,3,1);
 		Modem_Send_Cmd("AT+QMTPUB=0,0,0,0,\"mensajes\"\r\n");		//tx "AT+QMTPUB=0,0,0,0,TOPICO_APP"
@@ -345,15 +343,10 @@ void Modem_Task_Run(void){
 
 
 		GPIO_PinWrite(GPIOB,3,0);
-		//encender_led_rojo();
 		printf("%d,%d,%d,%d,%d,%d,%0.1f,%0.1f,%0.1f,%0.1f\r\n",horas,minutos,segundos,horas_destilacion,minutos_destilacion,segundos_destilacion,temperatura_grados_enviar,volumen,alcohol,total_minutos_destilacion);
-		//printf("%0.2f\r\n",sensor_temperatura);
 		putchar(CNTL_Z);
 		GPIO_PinWrite(GPIOE,0,1);
 		Modem_Rta_Cmd(500,"ESPERAR...",ST_ESPERAR_PARA_ENVIAR_DATOS,ST_ESPERAR_PARA_ENVIAR_DATOS);
-		//recibiMsgQtt = 0;*/
-		//Modem_Rta_Cmd_2("RING",ST_MOD_RING_ON);
-		//Key_Task_Run();
 
 	break;
 
@@ -433,10 +426,15 @@ void Modem_Task_Run(void){
 
 
 	case ST_MENSAJE_RECIBIDO_MQTT_1:
-		printf("ACCION  DETECTADO\r\n");
+		if(temperatura_grados_enviar > 84){
+			printf("ACCION  DETECTADO\r\n");
+			Modem_Send_Cmd("AT+CMGS=\"3052646735\"\r\n");
+			Modem_Rta_Cmd(3000,">",ST_MENSAJE_ALERTA_MQQTT,ST_MOD_CONN_PUB);
+		}
+		if(temperatura_grados_enviar < 84){
+			Modem_Rta_Cmd(1000,"eperar..",ST_MOD_CONN_PUB,ST_MOD_CONN_PUB);
+		}
 		GPIO_PinWrite(GPIOE,0,1);
-		Modem_Send_Cmd("AT+CMGS=\"3052646735\"\r\n");		//tx "AT+QMTPUB=0,0,0,0,TOPICO_APP"
-		Modem_Rta_Cmd(3000,">",ST_MENSAJE_ALERTA_MQQTT,ST_MOD_CONN_PUB);
 	break;
 	case ST_MENSAJE_ALERTA_MQQTT:
 		printf("PRECAUCION TEMPERATURA PROXIMA MAYOR A 85 GRADOS\r\n");
@@ -445,57 +443,11 @@ void Modem_Task_Run(void){
 		Modem_Rta_Cmd(1000,"ESPERAR...",ST_MOD_CONN_PUB,ST_MOD_CONN_PUB);
 	break;
 
-
-
-
-
-
-///////////////////////////////////////////////////////////////////////////////
-
-
-	/*case ST_ERROR_SIM:
-		// SIM no insertada
-	break;
-	case ST_MOD_ERROR_SENAL:
-		// NO hay antena o no hay señal
-	break;
-	case ST_MOD_ERROR_REG:
-		// No pudo registrar, decidir que hacer
-	break;
-	case ST_MOD_ERROR_IP:
-		// no pudo obtener una IP, posible APN o falta de datos en la SIM
-	break;
-	case ST_MOD_ERROR_CX_MQTT:
-		//notificar error de envio
-		//MQTT_Error(ST_MQTT_ERROR_SEND);
-	break;
-	case ST_MOD_KEEP_ALIVE:
-		Modem_Send_Cmd("AT\r\n");
-		Modem_Rta_Cmd(3, "OK", ST_MOD_CHK_URC, ST_MOD_KEEP_ALIVE);
-	break;*/
-	/*case ST_MOD_CHK_URC:
-		if(Recibido_URC()){
-			Modem_Check_URC_Run();
-			if(recibiMsgQtt){
-				recibiMsgQtt = 0;
-				modemSt = ST_MOD_CONN_PUB;
-			}
-		}
-		if(Boton1_Presionado()){
-			tiempopresionado=temp;
-		}
-		if(tiempopresionado=5){
-			printf("%d\r\n",tiempopresionado);
-		}
-		printf("ST_MOD_CONN_PUB \r\n");
-	break;*/
-
 	}
 
  }
 
-
-////////////////////////////////////////////////////////////AQUIII
+////////////////////////////////////////////////////////////////////////////////////
 void Key_Task_Run(void){
 	encender_led_rojo();
  	B1=boton1LeerEstado();
@@ -521,17 +473,7 @@ void Key_Task_Run(void){
 
 }
 
-//////////////////////////////////////////////////////////////7AQUIII
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/*char Test_Rta_Modem(char *rta2TestStr){
-char *puntero_ok;
-	puntero_ok=(char*)(strstr((char*)(&buffer_comando_recibido[0]),rta2TestStr));
-	if(puntero_ok) return 1;
-	else return 0;
-}*/
-
-
+/////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Retorna TRUE si la respuesta es la Esperada
 char Respuesta_Modem(char *rtaEsperada){
@@ -600,39 +542,6 @@ void Modem_Rta_Run(void){
 		}
 	}
 }
-
-/*void Modem_Check_URC_Run(void){
-	//!!! Recepcion de URCs
-	if(Respuesta_Modem("+QMTRECV")){ // mensaje MQTT
-		recibiMsgQtt = 1;
-		if(Test_Rta_Modem("LED ON")){
-			 encender_led_verde();
-		 }else{
-			 if(Test_Rta_Modem("LED OFF")){
-				 apagar_led_verde();
-			 }
-		 }
-	}else{  // algun otro URC
-		if(Test_Rta_Modem("OK")){
-
-		}
-	}
-}*/
-
-/*char Recibido_URC(void){
-static uint32_t time2waitEnd_URC;
-	if(numeroDeBytesDisponiblesEnBufferRx()){
-		if(Alarma_Elapsed(time2waitEnd_URC)){
-			return 1;
-		}
-		return 0;
-	}else{
-		time2waitEnd_URC = Alarma_Set(10); //tiempo que espera para fin de Rx de URC
-		return 0;
-	}
-}*/
-
-
 
 /*******************************************************************************
  * Public Source Code
