@@ -118,8 +118,7 @@ float Sensor_temperatura_Captura_de_datos(void){
 		if(temperatura_grados > 10){
 			temperatura_correccion = temperatura_grados;
 		}
-		//printf("16_bits---%d\r\n",dato_original);
-		//printf("%0.2f\r\n",temperatura_grados);
+
 	}
 
 	return(temperatura_correccion);
@@ -133,5 +132,4 @@ float Sensor_temperatura_Captura_de_datos(void){
 
 void Sensor_temperatura_Task_Run(void){
 	  sensor_temperatura = Sensor_temperatura_Captura_de_datos();
-	  //printf("%0.2f\r\n",sensor_temperatura);
 }
