@@ -52,6 +52,7 @@ const char APN_APP[]="internet.colombiamovil.com.co";
  ******************************************************************************/
 float  volumen ;
 float temperatura_grados_enviar ;
+uint8_t minutos_entero;
 /*******************************************************************************
  * External vars
  ******************************************************************************/
@@ -186,14 +187,11 @@ enum{
 	ST_ENVIAR_ALERTA,
 	ST_ESPERAR_PARA_ENVIAR_DATOS,
 	ST_MENSAJE_DESTILACION,
-	ST_MENSAJE_DESTILACION_15M,
-	ST_MENSAJE_DESTILACION_30M,
-	ST_MENSAJE_DESTILACION_45M,
-	ST_MENSAJE_DESTILACION_60M,
 	ST_ESPERAR_PARA_RECIBIR_DATOS,
 	ST_MENSAJE_RECIBIDO_MQTT_1,
 	ST_ESPERAR_RECIBIR_DATOS,
 	ST_MENSAJE_ALERTA_MQQTT,
+	ST_MENSAJE_DESTILACION_5M,
 
 };
 
@@ -340,47 +338,32 @@ void Modem_Task_Run(void){
 		    temperatura_grados_enviar = sensor_temperatura;
 		}
 
-
-
 		GPIO_PinWrite(GPIOB,3,0);
 		printf("%d,%d,%d,%d,%d,%d,%0.1f,%0.1f,%0.1f,%0.1f\r\n",horas,minutos,segundos,horas_destilacion,minutos_destilacion,segundos_destilacion,temperatura_grados_enviar,volumen,alcohol,total_minutos_destilacion);
 		putchar(CNTL_Z);
 		GPIO_PinWrite(GPIOE,0,1);
-		Modem_Rta_Cmd(500,"ESPERAR...",ST_ESPERAR_PARA_ENVIAR_DATOS,ST_ESPERAR_PARA_ENVIAR_DATOS);
+		Modem_Rta_Cmd(2000,"ESPERAR...",ST_ESPERAR_PARA_ENVIAR_DATOS,ST_ESPERAR_PARA_ENVIAR_DATOS);
 
 	break;
-
-
 	case ST_ESPERAR_PARA_ENVIAR_DATOS:
 		GPIO_PinWrite(GPIOB,3,1);
 		Modem_Send_Cmd("AT+QMTSUB=0,1,\"mensajes\",1\r\n");		//rx "
-		Modem_Rta_Cmd(100,"esperarar...",ST_ESPERAR_RECIBIR_DATOS,ST_ESPERAR_RECIBIR_DATOS);
+		Modem_Rta_Cmd(1000,"esperarar...",ST_ESPERAR_RECIBIR_DATOS,ST_ESPERAR_RECIBIR_DATOS);
 	break;
 
 	case ST_ESPERAR_RECIBIR_DATOS:
 		GPIO_PinWrite(GPIOB,3,1);
-		Modem_Rta_Cmd(10000,"PRECAUCION",ST_MENSAJE_RECIBIDO_MQTT_1,ST_ENVIAR_ALERTA);
+		Modem_Rta_Cmd(8000,"PRECAUCION",ST_MENSAJE_RECIBIDO_MQTT_1,ST_ENVIAR_ALERTA);
 	break;
 
 	case ST_ENVIAR_ALERTA:
-		if(total_minutos_destilacion > 5 && total_minutos_destilacion < 6){
-			Modem_Send_Cmd("AT+CMGS=\"3052646735\"\r\n");		//tx "AT+QMTPUB=0,0,0,0,TOPICO_APP"
-			Modem_Rta_Cmd(2000,">",ST_MENSAJE_DESTILACION_15M,ST_MOD_CONN_PUB);
-		}
-		if(total_minutos_destilacion > 10 && total_minutos_destilacion < 11){
-			Modem_Send_Cmd("AT+CMGS=\"3052646735\"\r\n");		//tx "AT+QMTPUB=0,0,0,0,TOPICO_APP"
-			Modem_Rta_Cmd(2000,">",ST_MENSAJE_DESTILACION_30M,ST_MOD_CONN_PUB);
-		}
-		if(total_minutos_destilacion > 15 && total_minutos_destilacion < 16){
-			Modem_Send_Cmd("AT+CMGS=\"3052646735\"\r\n");		//tx "AT+QMTPUB=0,0,0,0,TOPICO_APP"
-			Modem_Rta_Cmd(2000,">",ST_MENSAJE_DESTILACION_45M,ST_MOD_CONN_PUB);
-		}
-		if(total_minutos_destilacion > 20 && total_minutos_destilacion < 21){
-			Modem_Send_Cmd("AT+CMGS=\"3052646735\"\r\n");		//tx "AT+QMTPUB=0,0,0,0,TOPICO_APP"
-			Modem_Rta_Cmd(2000,">",ST_MENSAJE_DESTILACION_60M,ST_MOD_CONN_PUB);
+		minutos_entero = total_minutos_destilacion;
+		if(minutos_entero %5== 0){
+			Modem_Send_Cmd("AT+CMGS=\"3052646735\"\r\n");
+			Modem_Rta_Cmd(2000,">",ST_MENSAJE_DESTILACION_5M,ST_MOD_CONN_PUB);
 		}
 
-		if(sensor_temperatura > 90){
+		if(temperatura_grados_enviar > 90){
 			Modem_Send_Cmd("AT+CMGS=\"3052646735\"\r\n");		//tx "AT+QMTPUB=0,0,0,0,TOPICO_APP"
 			Modem_Rta_Cmd(2000,">",ST_MENSAJE_TEXTO,ST_ESPERAR_PARA_ENVIAR_DATOS);
 		}else{
@@ -397,33 +380,12 @@ void Modem_Task_Run(void){
 		Modem_Rta_Cmd(1000,"ESPERAR...",ST_MOD_CONN_PUB,ST_MOD_CONN_PUB);
 	break;
 
-	case ST_MENSAJE_DESTILACION_15M:
-		printf("5 MINUTOS DESTILANDO....TEMPERATURA %0.2f Grados Centigrados \r\n",sensor_temperatura);
+	case ST_MENSAJE_DESTILACION_5M:
+		printf("%d MINUTOS DESTILANDO....TEMPERATURA %0.2f Grados Centigrados \r\n",minutos_entero,temperatura_grados_enviar);
 		putchar(CNTL_Z);
 		GPIO_PinWrite(GPIOE,0,1);
 		Modem_Rta_Cmd(1000,"ESPERAR...",ST_MOD_CONN_PUB,ST_MOD_CONN_PUB);
 	break;
-	case ST_MENSAJE_DESTILACION_30M:
-		printf("10 MINUTOS DESTILANDO-->TEMPERATURA %0.2f Grados Centigrados\r\n",sensor_temperatura);
-		putchar(CNTL_Z);
-		GPIO_PinWrite(GPIOE,0,1);
-		Modem_Rta_Cmd(1000,"ESPERAR...",ST_MOD_CONN_PUB,ST_MOD_CONN_PUB);
-	break;
-
-	case ST_MENSAJE_DESTILACION_45M:
-		printf("15 MINUTOS DESTILANDO.....TEMPERATURA %0.2f Grados Centigrados\r\n",sensor_temperatura);
-		putchar(CNTL_Z);
-		GPIO_PinWrite(GPIOE,0,1);
-		Modem_Rta_Cmd(1000,"ESPERAR...",ST_MOD_CONN_PUB,ST_MOD_CONN_PUB);
-	break;
-
-	case ST_MENSAJE_DESTILACION_60M:
-		printf("20 MINUTOS DESTILANDo...TEMPERATURA %0.2f Grados Centigrados\r\n",sensor_temperatura);
-		putchar(CNTL_Z);
-		GPIO_PinWrite(GPIOE,0,1);
-		Modem_Rta_Cmd(1000,"ESPERAR...",ST_MOD_CONN_PUB,ST_MOD_CONN_PUB);
-	break;
-
 
 	case ST_MENSAJE_RECIBIDO_MQTT_1:
 		if(temperatura_grados_enviar > 84){
