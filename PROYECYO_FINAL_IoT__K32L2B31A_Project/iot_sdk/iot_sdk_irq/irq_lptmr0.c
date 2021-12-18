@@ -1,5 +1,5 @@
 /*! @file : irq_lptmr0.c
- * @author  Luis Carlos Nigrinis Alvarez
+ * @author
  * @version 1.0.0
  * @date    11/09/2021
  * @brief   Driver para 
@@ -42,6 +42,7 @@
  volatile uint32_t tiempodestilacion=0;
  volatile uint32_t tiempo_captura_datos=0;
  volatile uint32_t tiempo_envio_a_rabbit=0;
+ volatile uint32_t tiempo_conectando_a_la_red=0;
 
 
 
@@ -66,6 +67,7 @@ void LPTMR0_IRQHANDLER(void) {
    tiempodestilacion++;
    tiempopresionado++;
    tiempo_envio_a_rabbit++;
+   tiempo_conectando_a_la_red++;
 
 
    /* Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F
@@ -79,4 +81,3 @@ void LPTMR0_IRQHANDLER(void) {
 /*******************************************************************************
  * Public Source Code
  ******************************************************************************/
-

@@ -67,7 +67,8 @@ void Sensorultrasonico_1_init(void){
 	 }
 	 if(tiemposensorultrasonico > 111){
 		 distancia = cont;
-		 tiemposensorultrasonico=0;
+		 tiemposensorultrasonico = 0;
+
 	 }
 	return(distancia);
 }

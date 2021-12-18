@@ -1,5 +1,5 @@
 /*! @file : modem.c
- * @author  Luis Carlos Nigrinis Alvarez
+ * @author
  * @version 1.0.0
  * @date    21/10/2021
  * @brief   Driver para 
@@ -50,8 +50,9 @@ const char APN_APP[]="internet.colombiamovil.com.co";
 /*******************************************************************************
  * Private Prototypes
  ******************************************************************************/
-
-
+float  volumen ;
+float temperatura_grados_enviar ;
+uint8_t minutos_entero;
 /*******************************************************************************
  * External vars
  ******************************************************************************/
@@ -69,13 +70,15 @@ extern uint8_t horas_destilacion;
 extern float mililitros_alcohol;
 extern float sensor_temperatura;
 extern float alcohol;
+extern float total_minutos_destilacion;
+
+
 
 
 
 /*******************************************************************************
  * Local vars
  ******************************************************************************/
-
 
 /*******************************************************************************
  * Private Source Code
@@ -178,12 +181,26 @@ enum{
 	ST_MOD_NUMERO_4,
 	ST_ESPERAR_10_SEGUNDOS,
 	ON_VERDE,
+	ST_ACTIVAR_MSJ,
+	ST_ACTIVAR_GSM,
+	ST_MENSAJE_TEXTO,
+	ST_ENVIAR_ALERTA,
+	ST_ESPERAR_PARA_ENVIAR_DATOS,
+	ST_MENSAJE_DESTILACION,
+	ST_ESPERAR_PARA_RECIBIR_DATOS,
+	ST_MENSAJE_RECIBIDO_MQTT_1,
+	ST_ESPERAR_RECIBIR_DATOS,
+	ST_MENSAJE_ALERTA_MQQTT,
+	ST_MENSAJE_DESTILACION_5M,
 
 };
 
 void Modem_Init(void){
-	modemSt = ST_MOD_PUBLIC_DAT;
+	modemSt = ST_MOD_CFG;
+	GPIO_PinWrite(GPIOE,0,0);
+	GPIO_PinWrite(GPIOB,3,1);
 }
+
 
 
 
@@ -201,22 +218,27 @@ void Modem_Task_Run(void){
 	case ST_MOD_IDLE: // IDLE
 	break;
 	case ST_MOD_CFG:
+		GPIO_PinWrite(GPIOB,3,0);
 		Modem_Send_Cmd("ATE0\r\n"); 								// ATE0 Quitar ECO
       	Modem_Rta_Cmd(TIME_WAIT_RTA_CMD,"OK",ST_MOD_CFG_URC,ST_MOD_CFG); //rx OK
 	break;
 	case ST_MOD_CFG_URC:
+		GPIO_PinWrite(GPIOB,3,1);
 		Modem_Send_Cmd("AT+QURCCFG=\"urcport\",\"uart1\"\r\n");
 		Modem_Rta_Cmd(TIME_WAIT_RTA_CMD,"OK",ST_MOD_CFG_ALL_URC,ST_MOD_CFG_URC);
 	break;
 	case ST_MOD_CFG_ALL_URC:
+		GPIO_PinWrite(GPIOB,3,0);
 		Modem_Send_Cmd("AT+QINDCFG=\"ALL\",1,1\r\n");
 		Modem_Rta_Cmd(TIME_WAIT_RTA_CMD,"OK",ST_MOD_PWR_OFF,ST_MOD_CFG_URC);
 	break;
 	case ST_MOD_PWR_OFF:
+		GPIO_PinWrite(GPIOB,3,1);
 		Modem_Send_Cmd("AT+CFUN=0\r\n"); // Modo Avion				//AT+CFUN=0
 		Modem_Rta_Cmd(TIME_WAIT_RTA_CMD,"OK",ST_MOD_APN,ST_MOD_PWR_OFF); //rx OK
  	break;
 	case ST_MOD_APN:
+		GPIO_PinWrite(GPIOB,3,0);
 		buffer_comando_enviar[0] = 0;
 		strcat(buffer_comando_enviar,"AT+CGDCONT=1,\"IP\"");
 		strcat(buffer_comando_enviar,APN_APP);
@@ -225,100 +247,169 @@ void Modem_Task_Run(void){
 		Modem_Rta_Cmd(TIME_WAIT_RTA_CMD,"OK",ST_MOD_PWR_ON,ST_MOD_APN); 	// rx "OK"
 	break;
 	case ST_MOD_PWR_ON:
+		GPIO_PinWrite(GPIOB,3,1);
 		Modem_Send_Cmd("AT+CFUN=1\r\n");								//tx "AT+CFUN=1"
 		Modem_Rta_Cmd(TIME_WAIT_RTA_CMD,"OK",ST_MOD_SIM,ST_MOD_PWR_ON); 	//rx "OK"
     break;
  	case ST_MOD_SIM:
+ 		GPIO_PinWrite(GPIOB,3,0);
  		Modem_Send_Cmd("AT+CPIN?\r\n");									//tx "AT+CPIN?"
  		Modem_Rta_Cmd(TIME_WAIT_RTA_CMD,"READY",ST_MOD_SIGNAL,ST_MOD_SIM); // rx "READY"
 	break;
 	case ST_MOD_SIGNAL:
+		GPIO_PinWrite(GPIOB,3,1);
 		Modem_Send_Cmd("AT+CSQ\r\n");									//tx "AT+CSQ"
 		Modem_Rta_Cmd(TIME_WAIT_RTA_CMD,"+CSQ",ST_MOD_SEARCHING,ST_MOD_SIGNAL);
 	break;
 	case ST_MOD_SEARCHING:
-		encender_led_rojo();
-		apagar_led_verde();
+		GPIO_PinWrite(GPIOB,3,0);
 		Modem_Send_Cmd("AT+CREG?\r\n");											//tx "AT+CREG?"
-		Modem_Rta_Cmd(TIME_WAIT_RTA_CMD,"0,1",ST_MOD_ACT_CTX,ST_MOD_SEARCHING); 	//rx  "0,1"
+		Modem_Rta_Cmd(TIME_WAIT_RTA_CMD,"0,1",ST_ACTIVAR_MSJ,ST_MOD_SEARCHING); 	//rx  "0,1"
 	break;
+	case ST_ACTIVAR_MSJ:
+		GPIO_PinWrite(GPIOB,3,1);
+		Modem_Send_Cmd("AT+CMGF=1\r\n");											//tx "AT+CREG?"
+		Modem_Rta_Cmd(TIME_WAIT_RTA_CMD,"OK",ST_ACTIVAR_GSM,ST_MOD_SEARCHING);
+	break;
+
+	case ST_ACTIVAR_GSM :
+		GPIO_PinWrite(GPIOB,3,0);
+		Modem_Send_Cmd("AT+CSCS=\"GSM\"\r\n");											//tx "AT+CREG?"
+		Modem_Rta_Cmd(TIME_WAIT_RTA_CMD,"OK",ST_MOD_ACT_CTX,ST_MOD_SEARCHING);
+	break;
+
 	case ST_MOD_ACT_CTX:
-		encender_led_verde();
-		apagar_led_rojo();
+		GPIO_PinWrite(GPIOB,3,1);
 		Modem_Send_Cmd("AT+QIACT=1\r\n"); 									//tx "AT+QIACT=1"
 		Modem_Rta_Cmd(10000,"OK",ST_MOD_OPEN_MQTT,ST_MOD_ACT_CTX); 	//rx "OK"
 	break;
 	case ST_MOD_OPEN_MQTT:
-		Modem_Send_Cmd("AT+QMTOPEN=0,\"52.149.151.75\",1883\r\n"); //tx "AT+QMTOPEN=0,"52.149.151.75",1883"
+		GPIO_PinWrite(GPIOB,3,0);
+		Modem_Send_Cmd("AT+QMTOPEN=0,\"20.121.64.231\",1883\r\n"); //tx "AT+QMTOPEN=0,"20.121.64.231",1883"
 		Modem_Rta_Cmd(5000,"+QMTOPEN: 0,0",ST_MOD_CONN_TOPIC,ST_MOD_ACT_CTX);
 	break;
 	case ST_MOD_CONN_TOPIC:
+		GPIO_PinWrite(GPIOB,3,1);
 		Modem_Send_Cmd("AT+QMTCONN=0,\"mensajes\"\r\n");	//tx "AT+QMTCONN=0,"TOPICO_APP""
 		Modem_Rta_Cmd(TIME_WAIT_RTA_CMD,"+QMTCONN: 0,0,0",ST_MOD_CONN_PUB,ST_MOD_OPEN_MQTT);
 	break;
+	///////////////////////////////////Aqui empieza los estados de envio y recibo de datos por mqqtt///////
+
 	case ST_MOD_CONN_PUB:
+		GPIO_PinWrite(GPIOB,3,1);
 		Modem_Send_Cmd("AT+QMTPUB=0,0,0,0,\"mensajes\"\r\n");		//tx "AT+QMTPUB=0,0,0,0,TOPICO_APP"
 		Modem_Rta_Cmd(5000,">",ST_MOD_PUBLIC_DAT,ST_MOD_CONN_TOPIC);
+		GPIO_PinWrite(GPIOE,0,0);
 	break;
+
 	case ST_MOD_PUBLIC_DAT:
-		//encender_led_rojo();
-		printf("%d,%d,%d,%d,%d,%d,%0.1f,%0.1f,%0.1f\r\n",horas,minutos,segundos,horas_destilacion,minutos_destilacion,segundos_destilacion,sensor_temperatura,mililitros_alcohol,alcohol);
-		//printf("%0.2f\r\n",sensor_temperatura);
+		if(mililitros_alcohol > 85 ){
+			volumen = 0;
+		}
+		if(mililitros_alcohol < 85 && mililitros_alcohol > 77){
+			volumen = 100;
+		}
+		if(mililitros_alcohol < 77 && mililitros_alcohol > 60){
+			volumen = 150;
+		}
+		if(mililitros_alcohol < 60 && mililitros_alcohol > 66){
+			volumen = 200;
+		}
+		if(mililitros_alcohol < 66 && mililitros_alcohol > 62){
+			volumen = 250;
+		}
+		if(mililitros_alcohol < 62 && mililitros_alcohol > 55){
+			volumen = 300;
+		}
+		if(mililitros_alcohol < 55 && mililitros_alcohol > 49){
+			volumen = 400;
+		}
+		if(mililitros_alcohol < 49){
+			volumen = 923.8095-9.524*mililitros_alcohol;
+		}
+		if(sensor_temperatura >  10 ){
+		    if(sensor_temperatura > 79.0){
+		    	GPIO_PinWrite(GPIOA,13,0);
+		    }
+		    if(sensor_temperatura < 77.0){
+		    	GPIO_PinWrite(GPIOA,13,1);
+		    }
+
+		    temperatura_grados_enviar = sensor_temperatura;
+		}
+
+		GPIO_PinWrite(GPIOB,3,0);
+		printf("%d,%d,%d,%d,%d,%d,%0.1f,%0.1f,%0.1f,%0.1f\r\n",horas,minutos,segundos,horas_destilacion,minutos_destilacion,segundos_destilacion,temperatura_grados_enviar,volumen,alcohol,total_minutos_destilacion);
 		putchar(CNTL_Z);
-		Modem_Rta_Cmd(5000,"OK",ST_MOD_PUBLIC_DAT,ST_MOD_PUBLIC_DAT);
-		//recibiMsgQtt = 0;*/
-		//Modem_Rta_Cmd_2("RING",ST_MOD_RING_ON);
-		//Key_Task_Run();
+		GPIO_PinWrite(GPIOE,0,1);
+		Modem_Rta_Cmd(2000,"ESPERAR...",ST_ESPERAR_PARA_ENVIAR_DATOS,ST_ESPERAR_PARA_ENVIAR_DATOS);
 
 	break;
+	case ST_ESPERAR_PARA_ENVIAR_DATOS:
+		GPIO_PinWrite(GPIOB,3,1);
+		Modem_Send_Cmd("AT+QMTSUB=0,1,\"mensajes\",1\r\n");		//rx "
+		Modem_Rta_Cmd(1000,"esperarar...",ST_ESPERAR_RECIBIR_DATOS,ST_ESPERAR_RECIBIR_DATOS);
+	break;
 
+	case ST_ESPERAR_RECIBIR_DATOS:
+		GPIO_PinWrite(GPIOB,3,1);
+		Modem_Rta_Cmd(8000,"PRECAUCION",ST_MENSAJE_RECIBIDO_MQTT_1,ST_ENVIAR_ALERTA);
+	break;
 
-///////////////////////////////////////////////////////////////////////////////
-
-
-	/*case ST_ERROR_SIM:
-		// SIM no insertada
-	break;
-	case ST_MOD_ERROR_SENAL:
-		// NO hay antena o no hay señal
-	break;
-	case ST_MOD_ERROR_REG:
-		// No pudo registrar, decidir que hacer
-	break;
-	case ST_MOD_ERROR_IP:
-		// no pudo obtener una IP, posible APN o falta de datos en la SIM
-	break;
-	case ST_MOD_ERROR_CX_MQTT:
-		//notificar error de envio
-		//MQTT_Error(ST_MQTT_ERROR_SEND);
-	break;
-	case ST_MOD_KEEP_ALIVE:
-		Modem_Send_Cmd("AT\r\n");
-		Modem_Rta_Cmd(3, "OK", ST_MOD_CHK_URC, ST_MOD_KEEP_ALIVE);
-	break;*/
-	/*case ST_MOD_CHK_URC:
-		if(Recibido_URC()){
-			Modem_Check_URC_Run();
-			if(recibiMsgQtt){
-				recibiMsgQtt = 0;
-				modemSt = ST_MOD_CONN_PUB;
-			}
+	case ST_ENVIAR_ALERTA:
+		minutos_entero = total_minutos_destilacion;
+		if(minutos_entero %5== 0){
+			Modem_Send_Cmd("AT+CMGS=\"3052646735\"\r\n");
+			Modem_Rta_Cmd(2000,">",ST_MENSAJE_DESTILACION_5M,ST_MOD_CONN_PUB);
 		}
-		if(Boton1_Presionado()){
-			tiempopresionado=temp;
+
+		if(temperatura_grados_enviar > 90){
+			Modem_Send_Cmd("AT+CMGS=\"3052646735\"\r\n");		//tx "AT+QMTPUB=0,0,0,0,TOPICO_APP"
+			Modem_Rta_Cmd(2000,">",ST_MENSAJE_TEXTO,ST_ESPERAR_PARA_ENVIAR_DATOS);
+		}else{
+			Modem_Rta_Cmd(3000,"ESPERAR..",ST_MOD_CONN_PUB,ST_MOD_CONN_PUB);
 		}
-		if(tiempopresionado=5){
-			printf("%d\r\n",tiempopresionado);
+		GPIO_PinWrite(GPIOB,3,0);
+		GPIO_PinWrite(GPIOE,0,1);
+	break;
+	case ST_MENSAJE_TEXTO:
+		GPIO_PinWrite(GPIOB,3,0);
+		printf("ALERTA TEMPERATURA MAYOR 90 GRADOS... \r\n");
+		putchar(CNTL_Z);
+		GPIO_PinWrite(GPIOE,0,1);
+		Modem_Rta_Cmd(1000,"ESPERAR...",ST_MOD_CONN_PUB,ST_MOD_CONN_PUB);
+	break;
+
+	case ST_MENSAJE_DESTILACION_5M:
+		printf("%d MINUTOS DESTILANDO....TEMPERATURA %0.2f Grados Centigrados \r\n",minutos_entero,temperatura_grados_enviar);
+		putchar(CNTL_Z);
+		GPIO_PinWrite(GPIOE,0,1);
+		Modem_Rta_Cmd(1000,"ESPERAR...",ST_MOD_CONN_PUB,ST_MOD_CONN_PUB);
+	break;
+
+	case ST_MENSAJE_RECIBIDO_MQTT_1:
+		if(temperatura_grados_enviar > 84){
+			printf("ACCION  DETECTADO\r\n");
+			Modem_Send_Cmd("AT+CMGS=\"3052646735\"\r\n");
+			Modem_Rta_Cmd(3000,">",ST_MENSAJE_ALERTA_MQQTT,ST_MOD_CONN_PUB);
 		}
-		printf("ST_MOD_CONN_PUB \r\n");
-	break;*/
+		if(temperatura_grados_enviar < 84){
+			Modem_Rta_Cmd(1000,"eperar..",ST_MOD_CONN_PUB,ST_MOD_CONN_PUB);
+		}
+		GPIO_PinWrite(GPIOE,0,1);
+	break;
+	case ST_MENSAJE_ALERTA_MQQTT:
+		printf("PRECAUCION TEMPERATURA PROXIMA MAYOR A 85 GRADOS\r\n");
+		putchar(CNTL_Z);
+		GPIO_PinWrite(GPIOE,0,1);
+		Modem_Rta_Cmd(1000,"ESPERAR...",ST_MOD_CONN_PUB,ST_MOD_CONN_PUB);
+	break;
 
 	}
 
  }
 
-
-////////////////////////////////////////////////////////////AQUIII
+////////////////////////////////////////////////////////////////////////////////////
 void Key_Task_Run(void){
 	encender_led_rojo();
  	B1=boton1LeerEstado();
@@ -344,17 +435,7 @@ void Key_Task_Run(void){
 
 }
 
-//////////////////////////////////////////////////////////////7AQUIII
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/*char Test_Rta_Modem(char *rta2TestStr){
-char *puntero_ok;
-	puntero_ok=(char*)(strstr((char*)(&buffer_comando_recibido[0]),rta2TestStr));
-	if(puntero_ok) return 1;
-	else return 0;
-}*/
-
-
+/////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Retorna TRUE si la respuesta es la Esperada
 char Respuesta_Modem(char *rtaEsperada){
@@ -424,40 +505,6 @@ void Modem_Rta_Run(void){
 	}
 }
 
-/*void Modem_Check_URC_Run(void){
-	//!!! Recepcion de URCs
-	if(Respuesta_Modem("+QMTRECV")){ // mensaje MQTT
-		recibiMsgQtt = 1;
-		if(Test_Rta_Modem("LED ON")){
-			 encender_led_verde();
-		 }else{
-			 if(Test_Rta_Modem("LED OFF")){
-				 apagar_led_verde();
-			 }
-		 }
-	}else{  // algun otro URC
-		if(Test_Rta_Modem("OK")){
-
-		}
-	}
-}*/
-
-/*char Recibido_URC(void){
-static uint32_t time2waitEnd_URC;
-	if(numeroDeBytesDisponiblesEnBufferRx()){
-		if(Alarma_Elapsed(time2waitEnd_URC)){
-			return 1;
-		}
-		return 0;
-	}else{
-		time2waitEnd_URC = Alarma_Set(10); //tiempo que espera para fin de Rx de URC
-		return 0;
-	}
-}*/
-
-
-
 /*******************************************************************************
  * Public Source Code
  ******************************************************************************/
- 

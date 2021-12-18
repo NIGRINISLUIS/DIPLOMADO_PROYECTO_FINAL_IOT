@@ -100,10 +100,10 @@ int main(void) {
     		Fermentacion();
     		Destilacion();
     	}
-    	if(tiempo_captura_datos > 4000 && tiempo_captura_datos < 4100){
+    	if(tiempo_captura_datos > 4000 && tiempo_captura_datos < 4500){
     		Sensorultrasonico_1_Task_Run();
     	}
-    	if(tiempo_captura_datos > 4100){
+    	if(tiempo_captura_datos > 4500){
     		tiempo_captura_datos = 0 ;
     	}
     }
